@@ -8,6 +8,14 @@ import (
 	"go.uber.org/zap/zapcore"
 )
 
+const (
+	ColoredConsoleLogger LoggerType = iota
+	ConsoleLogger
+	ServiceLogger
+)
+
+type LoggerType int
+
 //SugarLogger ...
 type CustomLogger struct {
 	zap.SugaredLogger
@@ -16,15 +24,21 @@ type CustomLogger struct {
 type Logger interface {
 	Debug(...interface{})
 	Debugf(string, ...interface{})
+	Debugw(string, ...interface{})
 	Info(...interface{})
 	Infof(string, ...interface{})
+	Infow(string, ...interface{})
 	Warn(...interface{})
 	Warnf(string, ...interface{})
+	Warnw(string, ...interface{})
 	Error(...interface{})
 	Errorf(string, ...interface{})
+	Errorw(string, ...interface{})
 	Fatal(...interface{})
 	Fatalf(string, ...interface{})
+	Fatalw(string, ...interface{})
 	FailOnError(error, string) bool
+	Sync() error
 }
 
 func Colored(color, text string) string {
@@ -90,14 +104,14 @@ func Colored(color, text string) string {
 //DPanicLevel =  3
 //PanicLevel  =  4
 //FatalLevel  =  5
-func NewLogger(loglevel int, pretty bool) Logger {
+func NewLogger(loglevel int, lt LoggerType) Logger {
 	var (
 		levelEnc  zapcore.LevelEncoder
 		timeEnc   zapcore.TimeEncoder
 		callerEnc zapcore.CallerEncoder
 	)
-	switch pretty {
-	case true:
+	switch lt {
+	case ColoredConsoleLogger:
 		levelEnc = zapcore.CapitalColorLevelEncoder
 		timeEnc = func(t time.Time, enc zapcore.PrimitiveArrayEncoder) {
 			enc.AppendString(Colored("l_black", t.Format("2006.01.02  15:04:05 .000")))
@@ -105,15 +119,18 @@ func NewLogger(loglevel int, pretty bool) Logger {
 		callerEnc = func(caller zapcore.EntryCaller, enc zapcore.PrimitiveArrayEncoder) {
 			enc.AppendString(Colored("l_black", caller.TrimmedPath()))
 		}
-	case false:
+	case ConsoleLogger:
 		levelEnc = zapcore.CapitalLevelEncoder
 		timeEnc = func(t time.Time, enc zapcore.PrimitiveArrayEncoder) {
 			enc.AppendString(t.Format("2006.01.02  15:04:05 .000"))
 		}
 		callerEnc = zapcore.ShortCallerEncoder
+	case ServiceLogger:
+		levelEnc = zapcore.CapitalLevelEncoder
+		callerEnc = zapcore.ShortCallerEncoder
 	}
 
-	logger, err := zap.Config{
+	lc := zap.Config{
 		Encoding:    "console",
 		Level:       zap.NewAtomicLevelAt(zapcore.Level(loglevel)),
 		OutputPaths: []string{"stdout"},
@@ -121,22 +138,23 @@ func NewLogger(loglevel int, pretty bool) Logger {
 			MessageKey:   "message",
 			LevelKey:     "level",
 			EncodeLevel:  levelEnc,
-			TimeKey:      "timestamp",
-			EncodeTime:   timeEnc,
 			CallerKey:    "caller",
 			EncodeCaller: callerEnc,
 			//EncodeDuration: zapcore.NanosDurationEncoder,
 		},
-	}.Build()
+	}
+	if lt != ServiceLogger {
+		lc.EncoderConfig.TimeKey = "timestamp"
+		lc.EncoderConfig.EncodeTime = timeEnc
+	}
+	lgr, err := lc.Build()
 	if err != nil {
-		panic(err)
+		return nil
 	}
 	defer func() {
-		_ = logger.Sync()
+		_ = lgr.Sync()
 	}()
-	return &CustomLogger{
-		SugaredLogger: *logger.Sugar(),
-	}
+	return &CustomLogger{*lgr.Sugar()}
 }
 
 func (Logger *CustomLogger) FailOnError(err error, msg string) bool {
