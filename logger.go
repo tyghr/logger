@@ -130,30 +130,34 @@ func NewLogger(loglevel int, lt LoggerType) Logger {
 		callerEnc = zapcore.ShortCallerEncoder
 	}
 
-	lc := zap.Config{
-		Encoding:    "console",
-		Level:       zap.NewAtomicLevelAt(zapcore.Level(loglevel)),
-		OutputPaths: []string{"stdout"},
-		EncoderConfig: zapcore.EncoderConfig{
-			MessageKey:   "message",
-			LevelKey:     "level",
-			EncodeLevel:  levelEnc,
-			CallerKey:    "caller",
-			EncodeCaller: callerEnc,
-			//EncodeDuration: zapcore.NanosDurationEncoder,
-		},
+	encConfig := zapcore.EncoderConfig{
+		LevelKey:     "level",
+		EncodeLevel:  levelEnc,
+		CallerKey:    "caller",
+		EncodeCaller: callerEnc,
+		FunctionKey:  "function",
+		MessageKey:   "message",
+		//EncodeDuration: zapcore.NanosDurationEncoder,
 	}
 	if lt != ServiceLogger {
-		lc.EncoderConfig.TimeKey = "timestamp"
-		lc.EncoderConfig.EncodeTime = timeEnc
+		encConfig.TimeKey = "timestamp"
+		encConfig.EncodeTime = timeEnc
 	}
-	lgr, err := lc.Build()
+
+	lgr, err := zap.Config{
+		Encoding:      "console",
+		Level:         zap.NewAtomicLevelAt(zapcore.Level(loglevel)),
+		OutputPaths:   []string{"stdout"},
+		EncoderConfig: encConfig,
+	}.Build()
 	if err != nil {
 		return nil
 	}
+
 	defer func() {
 		_ = lgr.Sync()
 	}()
+
 	return &CustomLogger{*lgr.Sugar()}
 }
 
