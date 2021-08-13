@@ -148,6 +148,7 @@ func NewLogger(loglevel int, lt LoggerType) Logger {
 		EncodeCaller: callerEnc,
 		MessageKey:   "message",
 		//EncodeDuration: zapcore.NanosDurationEncoder,
+		ConsoleSeparator: "  ",
 	}
 	if lt != ServiceLogger {
 		encConfig.TimeKey = "timestamp"
