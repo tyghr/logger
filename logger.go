@@ -2,6 +2,7 @@ package logger
 
 import (
 	"fmt"
+	"strings"
 	"time"
 
 	"go.uber.org/zap"
@@ -110,6 +111,12 @@ func NewLogger(loglevel int, lt LoggerType) Logger {
 		timeEnc   zapcore.TimeEncoder
 		callerEnc zapcore.CallerEncoder
 	)
+	callerTrimmedPathFunc := func(caller zapcore.EntryCaller) string {
+		idx := strings.LastIndexByte(caller.Function, '/')
+		idx += strings.IndexByte(caller.Function[idx+1:], '.')
+		return caller.TrimmedPath() + ":" + caller.Function[idx+2:]
+	}
+
 	switch lt {
 	case ColoredConsoleLogger:
 		levelEnc = zapcore.CapitalColorLevelEncoder
@@ -117,17 +124,21 @@ func NewLogger(loglevel int, lt LoggerType) Logger {
 			enc.AppendString(Colored("l_black", t.Format("2006.01.02  15:04:05 .000")))
 		}
 		callerEnc = func(caller zapcore.EntryCaller, enc zapcore.PrimitiveArrayEncoder) {
-			enc.AppendString(Colored("l_black", caller.TrimmedPath()))
+			enc.AppendString(Colored("l_black", callerTrimmedPathFunc(caller)))
 		}
 	case ConsoleLogger:
 		levelEnc = zapcore.CapitalLevelEncoder
 		timeEnc = func(t time.Time, enc zapcore.PrimitiveArrayEncoder) {
 			enc.AppendString(t.Format("2006.01.02  15:04:05 .000"))
 		}
-		callerEnc = zapcore.ShortCallerEncoder
+		callerEnc = func(caller zapcore.EntryCaller, enc zapcore.PrimitiveArrayEncoder) {
+			enc.AppendString(callerTrimmedPathFunc(caller))
+		}
 	case ServiceLogger:
 		levelEnc = zapcore.CapitalLevelEncoder
-		callerEnc = zapcore.ShortCallerEncoder
+		callerEnc = func(caller zapcore.EntryCaller, enc zapcore.PrimitiveArrayEncoder) {
+			enc.AppendString(callerTrimmedPathFunc(caller))
+		}
 	}
 
 	encConfig := zapcore.EncoderConfig{
@@ -135,7 +146,6 @@ func NewLogger(loglevel int, lt LoggerType) Logger {
 		EncodeLevel:  levelEnc,
 		CallerKey:    "caller",
 		EncodeCaller: callerEnc,
-		FunctionKey:  "function",
 		MessageKey:   "message",
 		//EncodeDuration: zapcore.NanosDurationEncoder,
 	}
