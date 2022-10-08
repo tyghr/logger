@@ -16,7 +16,7 @@ const (
 
 type LoggerType int
 
-//SugarLogger ...
+// SugarLogger ...
 type CustomLogger struct {
 	zap.SugaredLogger
 }
@@ -43,9 +43,10 @@ type Logger interface {
 
 // NewLogger
 // Defaults opts are:
-//   ConsoleLogger type,
-//   DebugLevel,
-//   output to "stdout"
+//
+//	ConsoleLogger type,
+//	DebugLevel,
+//	output to "stdout"
 func NewLogger(opts ...Option) Logger {
 	optSet := OptionSet{
 		loggerType: ConsoleLogger,
@@ -71,7 +72,7 @@ func NewLogger(opts ...Option) Logger {
 	case ColoredConsoleLogger:
 		levelEnc = zapcore.CapitalColorLevelEncoder
 		timeEnc = func(t time.Time, enc zapcore.PrimitiveArrayEncoder) {
-			enc.AppendString(Colored("l_black", t.Format("2006.01.02  15:04:05 .000")))
+			enc.AppendString(Colored("l_black", t.Format("2006.01.02  15:04:05.000000")))
 		}
 		callerEnc = func(caller zapcore.EntryCaller, enc zapcore.PrimitiveArrayEncoder) {
 			enc.AppendString(Colored("l_black", callerTrimmedPathFunc(caller)))
@@ -79,7 +80,7 @@ func NewLogger(opts ...Option) Logger {
 	case ConsoleLogger:
 		levelEnc = zapcore.CapitalLevelEncoder
 		timeEnc = func(t time.Time, enc zapcore.PrimitiveArrayEncoder) {
-			enc.AppendString(t.Format("2006.01.02  15:04:05 .000"))
+			enc.AppendString(t.Format("2006.01.02  15:04:05.000000"))
 		}
 		callerEnc = func(caller zapcore.EntryCaller, enc zapcore.PrimitiveArrayEncoder) {
 			enc.AppendString(callerTrimmedPathFunc(caller))
