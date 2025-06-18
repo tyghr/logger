@@ -21,3 +21,7 @@ var (
 	FailOnError = std.FailOnError
 	Sync        = std.Sync
 )
+
+func Init(opts ...Option) {
+	std = NewLogger(opts...)
+}
