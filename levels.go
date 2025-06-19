@@ -1,6 +1,6 @@
 package logger
 
-var (
+const (
 	DebugLevel  = -1
 	InfoLevel   = 0
 	WarnLevel   = 1
